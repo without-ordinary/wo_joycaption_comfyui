@@ -166,7 +166,7 @@ class JoyCaptionPredictor:
 			)
 			self.model = LlavaForConditionalGeneration.from_pretrained(str(checkpoint_path), torch_dtype="auto", device_map="auto", quantization_config=qnt_config)
 		print(f"Loaded model {model} with memory mode {memory_mode}")
-		print(self.model)
+		#print(self.model)
 		self.model.eval()
 	
 	@torch.inference_mode()
