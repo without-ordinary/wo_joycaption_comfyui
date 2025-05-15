@@ -1,0 +1,15 @@
+[project]
+name = "joycaption_comfyui"
+description = "Nodes for running the JoyCaption image captioner VLM."
+version = "1.0.0"
+license = {file = "LICENSE"}
+dependencies = ["transformers>=4.51", "torchvision", "torch>=2.6.0", "huggingface-hub>=0.30.1", "accelerate", "bitsandbytes"]
+
+[project.urls]
+Repository = "https://github.com/fpgaminer/joycaption_comfyui"
+#  Used by Comfy Registry https://comfyregistry.org
+
+[tool.comfy]
+PublisherId = "fpgaminer"
+DisplayName = "joycaption_comfyui"
+Icon = ""
