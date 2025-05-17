@@ -117,8 +117,8 @@ EXTRA_OPTIONS = [
 ]
 
 CAPTION_LENGTH_CHOICES = (
-    ["any", "very short", "short", "medium-length", "long", "very long"] +
-    [str(i) for i in range(20, 261, 10)]
+	["any", "very short", "short", "medium-length", "long", "very long"] +
+	[str(i) for i in range(20, 261, 10)]
 )
 
 
