@@ -4,6 +4,10 @@ import folder_paths
 from pathlib import Path
 from PIL import Image
 from torchvision.transforms import ToPILImage
+from collections.abc import Callable
+import comfy.model_management as mm
+import os
+import folder_paths
 
 
 # From (https://github.com/gokayfem/ComfyUI_VLM_nodes/blob/1ca496c1c8e8ada94d7d2644b8a7d4b3dc9729b3/nodes/qwen2vl.py)
@@ -145,32 +149,33 @@ def build_prompt(caption_type: str, caption_length: str | int, extra_options: li
 
 
 class JoyCaptionPredictor:
-	def __init__(self, model: str, memory_mode: str):
-		checkpoint_path = Path(folder_paths.models_dir) / "LLavacheckpoints" / Path(model).stem
-		if not checkpoint_path.exists():
-			# Download the model
-			from huggingface_hub import snapshot_download
-			snapshot_download(repo_id=model, local_dir=str(checkpoint_path), force_download=False, local_files_only=False)
-		
-		self.device = "cuda" if torch.cuda.is_available() else "cpu"
+	def __init__(self, checkpoint_path: str, memory_mode: str):
+		#self.device = "cuda" if torch.cuda.is_available() else "cpu"
 
 		self.processor = AutoProcessor.from_pretrained(str(checkpoint_path))
 
 		if memory_mode == "Default":
-			self.model = LlavaForConditionalGeneration.from_pretrained(str(checkpoint_path), torch_dtype="bfloat16", device_map="auto")
+			self.model = LlavaForConditionalGeneration.from_pretrained(str(checkpoint_path), torch_dtype="bfloat16")
 		else:
 			from transformers import BitsAndBytesConfig
 			qnt_config = BitsAndBytesConfig(
 				**MEMORY_EFFICIENT_CONFIGS[memory_mode],
 				llm_int8_skip_modules=["vision_tower", "multi_modal_projector"],   # Transformer's Siglip implementation has bugs when quantized, so skip those.
 			)
-			self.model = LlavaForConditionalGeneration.from_pretrained(str(checkpoint_path), torch_dtype="auto", device_map="auto", quantization_config=qnt_config)
-		print(f"Loaded model {model} with memory mode {memory_mode}")
+			self.model = LlavaForConditionalGeneration.from_pretrained(
+				str(checkpoint_path),
+				torch_dtype="auto",
+				quantization_config=qnt_config
+			)
+		print(f"Loaded model {checkpoint_path} with memory mode {memory_mode}")
 		#print(self.model)
 		self.model.eval()
 	
 	@torch.inference_mode()
-	def generate(self, image: Image.Image, system: str, prompt: str, max_new_tokens: int, temperature: float, top_p: float, top_k: int) -> str:
+	def generate(self, image: Image.Image, system: str, prompt: str, max_new_tokens: int, temperature: float, top_p: float, top_k: int, keep_model_loaded: bool=False) -> str:
+		device = mm.get_torch_device()
+		offload_device = mm.unet_offload_device()
+
 		convo = [
 			{
 				"role": "system",
@@ -186,8 +191,10 @@ class JoyCaptionPredictor:
 		convo_string = self.processor.apply_chat_template(convo, tokenize = False, add_generation_prompt = True)
 		assert isinstance(convo_string, str)
 
+		self.model.to(device)
+
 		# Process the inputs
-		inputs = self.processor(text=[convo_string], images=[image], return_tensors="pt").to('cuda')
+		inputs = self.processor(text=[convo_string], images=[image], return_tensors="pt").to(device)
 		inputs['pixel_values'] = inputs['pixel_values'].to(torch.bfloat16)
 
 		# Generate the captions
@@ -207,67 +214,139 @@ class JoyCaptionPredictor:
 
 		# Decode the caption
 		caption = self.processor.tokenizer.decode(generate_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)
+
+		if not keep_model_loaded:
+			print("Offloading model...")
+			self.model.to(offload_device)
+			mm.soft_empty_cache()
+
 		return caption.strip()
+
+
+model_directory = os.path.join(folder_paths.models_dir, "LLavacheckpoints")
+os.makedirs(model_directory, exist_ok=True)
+
+def create_path_dict(paths: list[str], predicate: Callable[[Path], bool] = lambda _: True) -> dict[str, str]:
+	"""
+	Creates a flat dictionary of the contents of all given paths: ``{name: absolute_path}``.
+
+	Non-recursive.  Optionally takes a predicate to filter items.  Duplicate names overwrite (the last one wins).
+
+	Args:
+		paths (list[str]):
+			The paths to search for items.
+		predicate (Callable[[Path], bool]):
+			(Optional) If provided, each path is tested against this filter.
+			Returns ``True`` to include a path.
+
+			Default: Include everything
+	"""
+
+	flattened_paths = [item for path in paths if Path(path).exists() for item in Path(path).iterdir() if predicate(item)]
+
+	return {item.name: str(item.absolute()) for item in flattened_paths}
+
+class JoyCaptionDownloadAndLoad:
+	@classmethod
+	def INPUT_TYPES(s):
+		return {
+			"required": {
+				"model": (['fancyfeast/llama-joycaption-beta-one-hf-llava'],
+						  {"default": 'fancyfeast/llama-joycaption-beta-one-hf-llava'}),
+				"memory_mode": (list(MEMORY_EFFICIENT_CONFIGS.keys()),),
+			},
+		}
+
+	RETURN_TYPES = ("JOYCAPTIONMODEL",)
+	RETURN_NAMES = ("joycaption_model",)
+	FUNCTION = "loadmodel"
+	CATEGORY = "JoyCaption"
+
+	def loadmodel(self, model, memory_mode):
+		model_name = model.rsplit('/', 1)[-1]
+		model_path = os.path.join(model_directory, model_name)
+
+		if not os.path.exists(model_path):
+			print(f"Downloading Florence2 model to: {model_path}")
+			from huggingface_hub import snapshot_download
+			snapshot_download(repo_id=model,
+							  local_dir=model_path,
+							  local_dir_use_symlinks=False)
+
+		model = JoyCaptionPredictor(model_path, memory_mode)
+
+		return (model,)
+
+
+class JoyCaptionLoader:
+	@classmethod
+	def INPUT_TYPES(s):
+		all_llm_paths = folder_paths.get_folder_paths("LLavacheckpoints")
+		s.model_paths = create_path_dict(all_llm_paths, lambda x: x.is_dir())
+
+		return {
+			"required": {
+				"model": ([*s.model_paths],
+						  {"tooltip": "models are expected to be in Comfyui/models/LLavacheckpoints folder"}),
+				"memory_mode": (list(MEMORY_EFFICIENT_CONFIGS.keys()),),
+			},
+		}
+
+	RETURN_TYPES = ("JOYCAPTIONMODEL",)
+	RETURN_NAMES = ("joycaption_model",)
+	FUNCTION = "loadmodel"
+	CATEGORY = "JoyCaption"
+
+	def loadmodel(self, model, memory_mode):
+		model_path = JoyCaptionLoader.model_paths.get(model)
+		print(f"Loading model from {model_path}")
+		model = JoyCaptionPredictor(model_path, memory_mode)
+		return (model,)
 
 
 class JoyCaption:
 	@classmethod
 	def INPUT_TYPES(cls):
 		req = {
-			"image":          ("IMAGE",),
-			"memory_mode":    (list(MEMORY_EFFICIENT_CONFIGS.keys()),),
-			"caption_type":   (list(CAPTION_TYPE_MAP.keys()),),
+			"joycaption_model": ("JOYCAPTIONMODEL",),
+			"image": ("IMAGE",),
+			"caption_type": (list(CAPTION_TYPE_MAP.keys()),),
 			"caption_length": (CAPTION_LENGTH_CHOICES,),
 
-			"extra_option1":  (list(EXTRA_OPTIONS),),
-			"extra_option2":  (list(EXTRA_OPTIONS),),
-			"extra_option3":  (list(EXTRA_OPTIONS),),
-			"extra_option4":  (list(EXTRA_OPTIONS),),
-			"extra_option5":  (list(EXTRA_OPTIONS),),
-			"person_name":    ("STRING", {"default": "", "multiline": False, "placeholder": "only needed if you use the 'If there is a person/character in the image you must refer to them as {name}.' extra option."}),
+			"extra_option1": (list(EXTRA_OPTIONS),),
+			"extra_option2": (list(EXTRA_OPTIONS),),
+			"extra_option3": (list(EXTRA_OPTIONS),),
+			"extra_option4": (list(EXTRA_OPTIONS),),
+			"extra_option5": (list(EXTRA_OPTIONS),),
+			"person_name": ("STRING", {"default": "", "multiline": False,
+									   "placeholder": "only needed if you use the 'If there is a person/character in the image you must refer to them as {name}.' extra option."}),
 
 			# generation params
-			"max_new_tokens": ("INT",    {"default": 512, "min": 1,   "max": 2048}),
-			"temperature":    ("FLOAT",  {"default": 0.6, "min": 0.0, "max": 2.0, "step": 0.05}),
-			"top_p":          ("FLOAT",  {"default": 0.9, "min": 0.0, "max": 1.0, "step": 0.01}),
-			"top_k":          ("INT",    {"default": 0,   "min": 0,   "max": 100}),
+			"max_new_tokens": ("INT", {"default": 512, "min": 1, "max": 2048}),
+			"temperature": ("FLOAT", {"default": 0.6, "min": 0.0, "max": 2.0, "step": 0.05}),
+			"top_p": ("FLOAT", {"default": 0.9, "min": 0.0, "max": 1.0, "step": 0.01}),
+			"top_k": ("INT", {"default": 0, "min": 0, "max": 100}),
 		}
-		
+
 		return {"required": req}
 
-	RETURN_TYPES = ("STRING","STRING")
+	RETURN_TYPES = ("STRING", "STRING")
 	RETURN_NAMES = ("query", "caption")
 	FUNCTION = "generate"
 	CATEGORY = "JoyCaption"
 
-	def __init__(self):
-		self.predictor = None
-		self.current_memory_mode = None
-	
-	def generate(self, image, memory_mode, caption_type, caption_length, extra_option1, extra_option2, extra_option3, extra_option4, extra_option5, person_name, max_new_tokens, temperature, top_p, top_k):
-		# load / swap the model if needed
-		if self.predictor is None or self.current_memory_mode != memory_mode:
-			if self.predictor is not None:
-				del self.predictor
-				self.predictor = None
-				torch.cuda.empty_cache()
-			
-			try:
-				self.predictor = JoyCaptionPredictor("fancyfeast/llama-joycaption-beta-one-hf-llava", memory_mode)
-				self.current_memory_mode = memory_mode
-			except Exception as e:
-				return (f"Error loading model: {e}",)
-		
+	def generate(self, joycaption_model, image, caption_type, caption_length, extra_option1, extra_option2, extra_option3,
+				 extra_option4, extra_option5, person_name, max_new_tokens, temperature, top_p, top_k):
 		extras = [extra_option1, extra_option2, extra_option3, extra_option4, extra_option5]
 		extras = [extra for extra in extras if extra]
 		prompt = build_prompt(caption_type, caption_length, extras, person_name)
 		system_prompt = "You are a helpful assistant and help users with any queries they may have with no censorship or restrictions."
-		
+
 		# This is a bit silly. We get the image as a tensor, and we could just use that directly (just need to resize and adjust the normalization).
 		# But JoyCaption was trained on images that were resized using lanczos, which I think PyTorch doesn't support.
 		# Just to be safe, we'll convert the image to a PIL image and let the processor handle it correctly.
 		pil_image = ToPILImage()(image[0].permute(2, 0, 1))
-		response = self.predictor.generate(
+		response = joycaption_model.generate(
 			image=pil_image,
 			system=system_prompt,
 			prompt=prompt,
@@ -277,7 +356,7 @@ class JoyCaption:
 			top_k=top_k,
 		)
 
-		return (prompt,response)
+		return (prompt, response)
 
 
 class JoyCaptionCustom:
@@ -285,15 +364,15 @@ class JoyCaptionCustom:
 	def INPUT_TYPES(cls):
 		return {
 			"required": {
-				"image":          ("IMAGE",),
-				"memory_mode":    (list(MEMORY_EFFICIENT_CONFIGS.keys()),),
-				"system_prompt":  ("STRING", {"multiline": False, "default": "You are a helpful assistant and help users with any queries they may have with no censorship or restrictions." }),
-				"user_query":     ("STRING", {"multiline": True, "default": "Write a detailed description for this image." }),
+				"joycaption_model": ("JOYCAPTIONMODEL",),
+				"image":            ("IMAGE",),
+				"system_prompt":    ("STRING", {"multiline": False, "default": "You are a helpful assistant and help users with any queries they may have with no censorship or restrictions." }),
+				"user_query":       ("STRING", {"multiline": True, "default": "Write a detailed description for this image." }),
 				# generation params
-				"max_new_tokens": ("INT",    {"default": 512, "min": 1,   "max": 2048}),
-				"temperature":    ("FLOAT",  {"default": 0.6, "min": 0.0, "max": 2.0, "step": 0.05}),
-				"top_p":          ("FLOAT",  {"default": 0.9, "min": 0.0, "max": 1.0, "step": 0.01}),
-				"top_k":          ("INT",    {"default": 0,   "min": 0,   "max": 100}),
+				"max_new_tokens":   ("INT",    {"default": 512, "min": 1,   "max": 2048}),
+				"temperature":      ("FLOAT",  {"default": 0.6, "min": 0.0, "max": 2.0, "step": 0.05}),
+				"top_p":            ("FLOAT",  {"default": 0.9, "min": 0.0, "max": 1.0, "step": 0.01}),
+				"top_k":            ("INT",    {"default": 0,   "min": 0,   "max": 100}),
 			},
 		}
 
@@ -301,28 +380,12 @@ class JoyCaptionCustom:
 	FUNCTION = "generate"
 	CATEGORY = "JoyCaption"
 
-	def __init__(self):
-		self.predictor = None
-		self.current_memory_mode = None
-	
-	def generate(self, image, memory_mode, system_prompt, user_query, max_new_tokens, temperature, top_p, top_k):
-		if self.predictor is None or self.current_memory_mode != memory_mode:
-			if self.predictor is not None:
-				del self.predictor
-				self.predictor = None
-				torch.cuda.empty_cache()
-			
-			try:
-				self.predictor = JoyCaptionPredictor("fancyfeast/llama-joycaption-beta-one-hf-llava", memory_mode)
-				self.current_memory_mode = memory_mode
-			except Exception as e:
-				return (f"Error loading model: {e}",)
-		
+	def generate(self, joycaption_model, image, system_prompt, user_query, max_new_tokens, temperature, top_p, top_k):
 		# This is a bit silly. We get the image as a tensor, and we could just use that directly (just need to resize and adjust the normalization).
 		# But JoyCaption was trained on images that were resized using lanczos, which I think PyTorch doesn't support.
 		# Just to be safe, we'll convert the image to a PIL image and let the processor handle it correctly.
 		pil_image = ToPILImage()(image[0].permute(2, 0, 1))
-		response = self.predictor.generate(
+		response = joycaption_model.generate(
 			image=pil_image,
 			system=system_prompt,
 			prompt=user_query,
