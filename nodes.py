@@ -180,8 +180,19 @@ class JoyCaptionPredictor:
 		self.model.eval()
 	
 	@torch.inference_mode()
-	def generate(self, image: Image.Image, system: str, prompt: str, max_new_tokens: int, temperature: float, top_p: float, top_k: int, keep_model_loaded: bool=False) -> str:
+	def generate(self, image: Image.Image, system: str, prompt: str, max_new_tokens: int, temperature: float,
+				 top_p: float, top_k: int, seed: int=None, keep_model_loaded: bool=False) -> str:
 		self.model.to(self.device)
+
+		if seed:
+			if torch.cuda.is_available() and "cuda" in self.device:
+				print(f"cuda seed: {seed}")
+				seed_generator = torch.Generator(device="cuda")
+				seed_generator.manual_seed(seed)
+			else:
+				print(f"cpu seed: {seed}")
+				seed_generator = torch.Generator()
+				seed_generator.manual_seed(seed)
 
 		convo = [
 			{
@@ -343,6 +354,7 @@ class JoyCaption:
 			"temperature":          ("FLOAT",   {"default": 0.6, "min": 0.0, "max": 2.0, "step": 0.05}),
 			"top_p":                ("FLOAT",   {"default": 0.9, "min": 0.0, "max": 1.0, "step": 0.01}),
 			"top_k":                ("INT",     {"default": 0, "min": 0, "max": 100}),
+			"seed":                 ("INT",     {"default": 1, "min": 1, "max": 0xffffffffffffffff}),
 			"keep_model_loaded":    ("BOOLEAN", {"default": False, "tooltip": "Do not unload model after node execution."}),
 		}
 
@@ -354,7 +366,7 @@ class JoyCaption:
 	CATEGORY = "JoyCaption"
 
 	def generate(self, joycaption_model, image, caption_type, caption_length, extra_option1, extra_option2, extra_option3,
-				 extra_option4, extra_option5, person_name, max_new_tokens, temperature, top_p, top_k, keep_model_loaded):
+				 extra_option4, extra_option5, person_name, max_new_tokens, temperature, top_p, top_k, seed, keep_model_loaded):
 		extras = [extra_option1, extra_option2, extra_option3, extra_option4, extra_option5]
 		extras = [extra for extra in extras if extra]
 		prompt = build_prompt(caption_type, caption_length, extras, person_name)
@@ -372,6 +384,7 @@ class JoyCaption:
 			temperature=temperature,
 			top_p=top_p,
 			top_k=top_k,
+			seed=seed,
 			keep_model_loaded=keep_model_loaded,
 		)
 
@@ -392,6 +405,7 @@ class JoyCaptionCustom:
 				"temperature":          ("FLOAT",   {"default": 0.6, "min": 0.0, "max": 2.0, "step": 0.05}),
 				"top_p":                ("FLOAT",   {"default": 0.9, "min": 0.0, "max": 1.0, "step": 0.01}),
 				"top_k":                ("INT",     {"default": 0,   "min": 0,   "max": 100}),
+				"seed":                 ("INT",     {"default": 1, "min": 1, "max": 0xffffffffffffffff}),
 				"keep_model_loaded":    ("BOOLEAN", {"default": False}),
 			},
 		}
@@ -400,7 +414,7 @@ class JoyCaptionCustom:
 	FUNCTION = "generate"
 	CATEGORY = "JoyCaption"
 
-	def generate(self, joycaption_model, image, system_prompt, user_query, max_new_tokens, temperature, top_p, top_k, keep_model_loaded):
+	def generate(self, joycaption_model, image, system_prompt, user_query, max_new_tokens, temperature, top_p, top_k, seed, keep_model_loaded):
 		# This is a bit silly. We get the image as a tensor, and we could just use that directly (just need to resize and adjust the normalization).
 		# But JoyCaption was trained on images that were resized using lanczos, which I think PyTorch doesn't support.
 		# Just to be safe, we'll convert the image to a PIL image and let the processor handle it correctly.
@@ -413,6 +427,7 @@ class JoyCaptionCustom:
 			temperature=temperature,
 			top_p=top_p,
 			top_k=top_k,
+			seed=seed,
 			keep_model_loaded=keep_model_loaded,
 		)
 
