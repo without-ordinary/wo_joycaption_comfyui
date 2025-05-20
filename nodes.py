@@ -261,7 +261,11 @@ class JoyCaptionDownloadAndLoad:
 		devices = get_device_list()
 		return {
 			"required": {
-				"model": (['fancyfeast/llama-joycaption-beta-one-hf-llava'],
+				"model": ([
+							  'fancyfeast/llama-joycaption-beta-one-hf-llava',
+							  'fancyfeast/llama-joycaption-alpha-two-hf-llava',
+							  'fancyfeast/llama-joycaption-alpha-two-vqa-test-1',
+						  ],
 						  {"default": 'fancyfeast/llama-joycaption-beta-one-hf-llava'}),
 				"memory_mode": (list(MEMORY_EFFICIENT_CONFIGS.keys()),),
 				"device": (devices, {"default": devices[1] if len(devices) > 1 else devices[0]}),
