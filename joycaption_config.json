@@ -1,0 +1,172 @@
+{
+  "CAPTION_TYPE_MAP": {
+    "Descriptive": [
+      "Write a detailed description for this image.",
+      "Write a detailed description for this image in {word_count} words or less.",
+      "Write a {length} detailed description for this image."
+    ],
+    "Descriptive (Casual)": [
+      "Write a descriptive caption for this image in a casual tone.",
+      "Write a descriptive caption for this image in a casual tone within {word_count} words.",
+      "Write a {length} descriptive caption for this image in a casual tone."
+    ],
+    "Straightforward": [
+      "Write a straightforward caption for this image. Begin with the main subject and medium. Mention pivotal elements—people, objects, scenery—using confident, definite language. Focus on concrete details like color, shape, texture, and spatial relationships. Show how elements interact. Omit mood and speculative wording. If text is present, quote it exactly. Note any watermarks, signatures, or compression artifacts. Never mention what's absent, resolution, or unobservable details. Vary your sentence structure and keep the description concise, without starting with “This image is…” or similar phrasing.",
+      "Write a straightforward caption for this image within {word_count} words. Begin with the main subject and medium. Mention pivotal elements—people, objects, scenery—using confident, definite language. Focus on concrete details like color, shape, texture, and spatial relationships. Show how elements interact. Omit mood and speculative wording. If text is present, quote it exactly. Note any watermarks, signatures, or compression artifacts. Never mention what's absent, resolution, or unobservable details. Vary your sentence structure and keep the description concise, without starting with “This image is…” or similar phrasing.",
+      "Write a {length} straightforward caption for this image. Begin with the main subject and medium. Mention pivotal elements—people, objects, scenery—using confident, definite language. Focus on concrete details like color, shape, texture, and spatial relationships. Show how elements interact. Omit mood and speculative wording. If text is present, quote it exactly. Note any watermarks, signatures, or compression artifacts. Never mention what's absent, resolution, or unobservable details. Vary your sentence structure and keep the description concise, without starting with “This image is…” or similar phrasing."
+    ],
+    "Stable Diffusion Prompt": [
+      "Output a stable diffusion prompt that is indistinguishable from a real stable diffusion prompt.",
+      "Output a stable diffusion prompt that is indistinguishable from a real stable diffusion prompt. {word_count} words or less.",
+      "Output a {length} stable diffusion prompt that is indistinguishable from a real stable diffusion prompt."
+    ],
+    "MidJourney": [
+      "Write a MidJourney prompt for this image.",
+      "Write a MidJourney prompt for this image within {word_count} words.",
+      "Write a {length} MidJourney prompt for this image."
+    ],
+    "Danbooru tag list": [
+      "Generate only comma-separated Danbooru tags (lowercase_underscores). Strict order: `artist:`, `copyright:`, `character:`, `meta:`, then general tags. Include counts (1girl), appearance, clothing, accessories, pose, expression, actions, background. Use precise Danbooru syntax. No extra text.",
+      "Generate only comma-separated Danbooru tags (lowercase_underscores). Strict order: `artist:`, `copyright:`, `character:`, `meta:`, then general tags. Include counts (1girl), appearance, clothing, accessories, pose, expression, actions, background. Use precise Danbooru syntax. No extra text. {word_count} words or less.",
+      "Generate only comma-separated Danbooru tags (lowercase_underscores). Strict order: `artist:`, `copyright:`, `character:`, `meta:`, then general tags. Include counts (1girl), appearance, clothing, accessories, pose, expression, actions, background. Use precise Danbooru syntax. No extra text. {length} length."
+    ],
+    "e621 tag list": [
+      "Write a comma-separated list of e621 tags in alphabetical order for this image. Start with the artist, copyright, character, species, meta, and lore tags (if any), prefixed by 'artist:', 'copyright:', 'character:', 'species:', 'meta:', and 'lore:'. Then all the general tags.",
+      "Write a comma-separated list of e621 tags in alphabetical order for this image. Start with the artist, copyright, character, species, meta, and lore tags (if any), prefixed by 'artist:', 'copyright:', 'character:', 'species:', 'meta:', and 'lore:'. Then all the general tags. Keep it under {word_count} words.",
+      "Write a {length} comma-separated list of e621 tags in alphabetical order for this image. Start with the artist, copyright, character, species, meta, and lore tags (if any), prefixed by 'artist:', 'copyright:', 'character:', 'species:', 'meta:', and 'lore:'. Then all the general tags."
+    ],
+    "Rule34 tag list": [
+      "Write a comma-separated list of rule34 tags in alphabetical order for this image. Start with the artist, copyright, character, and meta tags (if any), prefixed by 'artist:', 'copyright:', 'character:', and 'meta:'. Then all the general tags.",
+      "Write a comma-separated list of rule34 tags in alphabetical order for this image. Start with the artist, copyright, character, and meta tags (if any), prefixed by 'artist:', 'copyright:', 'character:', and 'meta:'. Then all the general tags. Keep it under {word_count} words.",
+      "Write a {length} comma-separated list of rule34 tags in alphabetical order for this image. Start with the artist, copyright, character, and meta tags (if any), prefixed by 'artist:', 'copyright:', 'character:', and 'meta:'. Then all the general tags."
+    ],
+    "Booru-like tag list": [
+      "Write a list of Booru-like tags for this image.",
+      "Write a list of Booru-like tags for this image within {word_count} words.",
+      "Write a {length} list of Booru-like tags for this image."
+    ],
+    "Art Critic": [
+      "Analyze this image like an art critic would with information about its composition, style, symbolism, the use of color, light, any artistic movement it might belong to, etc.",
+      "Analyze this image like an art critic would with information about its composition, style, symbolism, the use of color, light, any artistic movement it might belong to, etc. Keep it within {word_count} words.",
+      "Analyze this image like an art critic would with information about its composition, style, symbolism, the use of color, light, any artistic movement it might belong to, etc. Keep it {length}."
+    ],
+    "Product Listing": [
+      "Write a caption for this image as though it were a product listing.",
+      "Write a caption for this image as though it were a product listing. Keep it under {word_count} words.",
+      "Write a {length} caption for this image as though it were a product listing."
+    ],
+    "Social Media Post": [
+      "Write a caption for this image as if it were being used for a social media post.",
+      "Write a caption for this image as if it were being used for a social media post. Limit the caption to {word_count} words.",
+      "Write a {length} caption for this image as if it were being used for a social media post."
+    ]
+  },
+  "CAPTION_LENGTH_CHOICES": [
+    "any",
+    "very short",
+    "short",
+    "medium-length",
+    "long",
+    "very long",
+    "20",
+    "30",
+    "40",
+    "50",
+    "60",
+    "70",
+    "80",
+    "90",
+    "100",
+    "110",
+    "120",
+    "130",
+    "140",
+    "150",
+    "160",
+    "170",
+    "180",
+    "190",
+    "200",
+    "210",
+    "220",
+    "230",
+    "240",
+    "250",
+    "260"
+  ],
+  "EXTRA_MAP": {
+     "refer_character_name": "If there is a person/character in the image you must refer to them as {name}.",
+     "exclude_people_info": "Do NOT include information about people/characters that cannot be changed (like ethnicity, gender, etc), but do still include changeable attributes (like hair style).",
+     "include_lighting": "Include information about lighting.",
+     "include_camera_angle": "Include information about camera angle.",
+     "include_watermark_info": "Include information about whether there is a watermark or not.",
+     "include_JPEG_artifacts": "Include information about whether there are JPEG artifacts or not.",
+     "include_exif": "If it is a photo you MUST include information about what camera was likely used and details such as aperture, shutter speed, ISO, etc.",
+     "exclude_sexual": "Do NOT include anything sexual; keep it PG.",
+     "exclude_image_resolution": "Do NOT mention the image's resolution.",
+     "include_aesthetic_quality": "You MUST include information about the subjective aesthetic quality of the image from low to very high.",
+     "include_composition_style": "Include information on the image's composition style, such as leading lines, rule of thirds, or symmetry.",
+     "exclude_text": "Do NOT mention any text that is in the image.",
+     "specify_depth_field": "Specify the depth of field and whether the background is in focus or blurred.",
+     "specify_lighting_sources": "If applicable, mention the likely use of artificial or natural lighting sources.",
+     "do_not_use_ambiguous_language": "Do NOT use any ambiguous language.",
+     "include_nsfw_rating": "Include whether the image is sfw, suggestive, or nsfw.",
+     "only_describe_most_important_elements": "ONLY describe the most important elements of the image.",
+     "do_not_include_artist_name_or_title": "If it is a work of art, do not include the artist's name or the title of the work.",
+     "identify_image_orientation": "Identify the image orientation (portrait, landscape, or square) and aspect ratio if obvious.",
+     "use_vulgar_slang_and_profanity": "Use vulgar slang and profanity, such as (but not limited to) \"fucking,\" \"slut,\" \"cock,\" etc.",
+     "do_not_use_polite_euphemisms": "Do NOT use polite euphemisms—lean into blunt, casual phrasing.",
+     "include_character_age": "Include information about the ages of any people/characters when applicable.",
+     "include_camera_shot_type": "Mention whether the image depicts an extreme close-up, close-up, medium close-up, medium shot, cowboy shot, medium wide shot, wide shot, or extreme wide shot.",
+     "exclude_mood_feeling": "Do not mention the mood/feeling/etc of the image.",
+     "include_camera_vantage_height": "Explicitly specify the vantage height (eye-level, low-angle worm’s-eye, bird’s-eye, drone, rooftop, etc.).",
+     "mention_watermark_explicitly": "If there is a watermark, you must mention it.",
+     "avoid_meta_descriptive_phrases": "Your response will be used by a text-to-image model, so avoid useless meta phrases like “This image shows…”, \"You are looking at...\", etc."
+  },
+  "EXTRA_OPTIONS": [
+    "If there is a person/character in the image you must refer to them as {name}.",
+    "Do NOT include information about people/characters that cannot be changed (like ethnicity, gender, etc), but do still include changeable attributes (like hair style).",
+    "Include information about lighting.",
+    "Include information about camera angle.",
+    "Include information about whether there is a watermark or not.",
+    "Include information about whether there are JPEG artifacts or not.",
+    "If it is a photo you MUST include information about what camera was likely used and details such as aperture, shutter speed, ISO, etc.",
+    "Do NOT include anything sexual; keep it PG.",
+    "Do NOT mention the image's resolution.",
+    "You MUST include information about the subjective aesthetic quality of the image from low to very high.",
+    "Include information on the image's composition style, such as leading lines, rule of thirds, or symmetry.",
+    "Do NOT mention any text that is in the image.",
+    "Specify the depth of field and whether the background is in focus or blurred.",
+    "If applicable, mention the likely use of artificial or natural lighting sources.",
+    "Do NOT use any ambiguous language.",
+    "Include whether the image is sfw, suggestive, or nsfw.",
+    "ONLY describe the most important elements of the image.",
+    "If it is a work of art, do not include the artist's name or the title of the work.",
+    "Identify the image orientation (portrait, landscape, or square) and aspect ratio if obvious.",
+    "Use vulgar slang and profanity, such as (but not limited to) \"fucking,\" \"slut,\" \"cock,\" etc.",
+    "Do NOT use polite euphemisms—lean into blunt, casual phrasing.",
+    "Include information about the ages of any people/characters when applicable.",
+    "Mention whether the image depicts an extreme close-up, close-up, medium close-up, medium shot, cowboy shot, medium wide shot, wide shot, or extreme wide shot.",
+    "Do not mention the mood/feeling/etc of the image.",
+    "Explicitly specify the vantage height (eye-level, low-angle worm’s-eye, bird’s-eye, drone, rooftop, etc.).",
+    "If there is a watermark, you must mention it.",
+    "Your response will be used by a text-to-image model, so avoid useless meta phrases like “This image shows…”, \"You are looking at...\", etc."
+  ],
+  "MEMORY_EFFICIENT_CONFIGS": {
+    "Default": {},
+    "Balanced (8-bit)": {
+      "load_in_8bit": true
+    },
+    "Maximum Savings (4-bit)": {
+      "load_in_4bit": true,
+      "bnb_4bit_quant_type": "nf4",
+      "bnb_4bit_compute_dtype": "torch.bfloat16",
+      "bnb_4bit_use_double_quant": true
+    }
+  },
+  "MODELS": [
+    "fancyfeast/llama-joycaption-beta-one-hf-llava",
+    "fancyfeast/llama-joycaption-alpha-two-hf-llava",
+    "fancyfeast/llama-joycaption-alpha-two-vqa-test-1"
+  ]
+}
