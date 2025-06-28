@@ -8,7 +8,6 @@ from collections.abc import Callable
 import comfy.model_management as mm
 import os
 import json
-import folder_paths
 
 
 # From (https://github.com/gokayfem/ComfyUI_VLM_nodes/blob/1ca496c1c8e8ada94d7d2644b8a7d4b3dc9729b3/nodes/qwen2vl.py)
@@ -16,18 +15,18 @@ import folder_paths
 
 
 
+# Read a JSON file and convert to a Python dictionary.
 def read_joycaption_config(file_path):
-  """读取 JSON 文件并转换为 Python 字典。"""
-  try:
-	with open(file_path, 'r', encoding='utf-8') as f:
-	  data = json.load(f)
-	return data
-  except FileNotFoundError:
-	print(f"Error: File '{file_path}' not found.")
-	return None
-  except json.JSONDecodeError:
-	print(f"Error: Invalid JSON format in '{file_path}'.")
-	return None
+	try:
+		with open(file_path, 'r', encoding='utf-8') as f:
+			data = json.load(f)
+			return data
+	except FileNotFoundError:
+		print(f"Error: File '{file_path}' not found.")
+		return None
+	except json.JSONDecodeError:
+		print(f"Error: Invalid JSON format in '{file_path}'.")
+		return None
 
 joycaption_node_path = os.path.dirname(os.path.realpath(__file__))
 joycaption_config = read_joycaption_config(os.path.join(joycaption_node_path, "joycaption_config.json"))
@@ -41,6 +40,7 @@ MEMORY_EFFICIENT_CONFIGS_DICT = joycaption_config["MEMORY_EFFICIENT_CONFIGS"] # 
 CAPTION_TYPE_CHOICES_KEYS = list(CAPTION_TYPE_CONFIG_MAP.keys())
 # CAPTION_LENGTH_CHOICES_LIST is already suitable for UI choices
 MEMORY_EFFICIENT_MODES_KEYS = list(MEMORY_EFFICIENT_CONFIGS_DICT.keys())
+
 
 def build_prompt(caption_type: str, caption_length: str | int, extra_options: list[str], name_input: str) -> str:
 	prompt_templates_list = []
