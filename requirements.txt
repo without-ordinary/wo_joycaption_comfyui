@@ -1,4 +1,4 @@
-transformers>=4.51
+transformers>=4.51.0
 torchvision
 torch
 huggingface-hub
