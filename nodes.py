@@ -32,9 +32,10 @@ joycaption_node_path = os.path.dirname(os.path.realpath(__file__))
 joycaption_config = read_joycaption_config(os.path.join(joycaption_node_path, "joycaption_config.json"))
 
 # Store the actual data structures from the config
-CAPTION_TYPE_CONFIG_MAP = joycaption_config["CAPTION_TYPE_MAP"]  # This is a dictionary
+CAPTION_TYPE_CONFIG_MAP = joycaption_config["CAPTION_TYPE_MAP"] # This is a dictionary
 CAPTION_LENGTH_CHOICES_LIST = list(joycaption_config["CAPTION_LENGTH_CHOICES"]) # This is a list of strings
 MEMORY_EFFICIENT_CONFIGS_DICT = joycaption_config["MEMORY_EFFICIENT_CONFIGS"] # This is a dictionary
+OPTIONS_CONFIG_MAP = joycaption_config["EXTRA_MAP"] # This is a dictionary
 
 # Derive lists of keys/choices specifically for UI elements (dropdowns)
 CAPTION_TYPE_CHOICES_KEYS = list(CAPTION_TYPE_CONFIG_MAP.keys())
@@ -486,19 +487,10 @@ class JoyCaptionExtraOptions:
     @classmethod
     def INPUT_TYPES(cls):
         # ... (INPUT_TYPES definition remains the same)
+        inputs = {key: ("BOOLEAN", {"default": False, "tooltip": value}) for key, value in OPTIONS_CONFIG_MAP.items()}
+        inputs["character_name"] = ("STRING", {"default": "", "multiline": False, "placeholder": "e.g., 'Skywalker'"})
         return {
-            "required": {
-                "refer_character_name": ("BOOLEAN", {"default": False}), "exclude_people_info": ("BOOLEAN", {"default": False}), "include_lighting": ("BOOLEAN", {"default": False}),
-                "include_camera_angle": ("BOOLEAN", {"default": False}), "include_watermark_info": ("BOOLEAN", {"default": False}), "include_JPEG_artifacts": ("BOOLEAN", {"default": False}),
-                "include_exif": ("BOOLEAN", {"default": False}), "exclude_sexual": ("BOOLEAN", {"default": False}), "exclude_image_resolution": ("BOOLEAN", {"default": False}),
-                "include_aesthetic_quality": ("BOOLEAN", {"default": False}), "include_composition_style": ("BOOLEAN", {"default": False}), "exclude_text": ("BOOLEAN", {"default": False}),
-                "specify_depth_field": ("BOOLEAN", {"default": False}), "specify_lighting_sources": ("BOOLEAN", {"default": False}), "do_not_use_ambiguous_language": ("BOOLEAN", {"default": False}),
-                "include_nsfw_rating": ("BOOLEAN", {"default": False}), "only_describe_most_important_elements": ("BOOLEAN", {"default": False}), "do_not_include_artist_name_or_title": ("BOOLEAN", {"default": False}),
-                "identify_image_orientation": ("BOOLEAN", {"default": False}), "use_vulgar_slang_and_profanity": ("BOOLEAN", {"default": False}), "do_not_use_polite_euphemisms": ("BOOLEAN", {"default": False}),
-                "include_character_age": ("BOOLEAN", {"default": False}), "include_camera_shot_type": ("BOOLEAN", {"default": False}), "exclude_mood_feeling": ("BOOLEAN", {"default": False}),
-                "include_camera_vantage_height": ("BOOLEAN", {"default": False}), "mention_watermark_explicitly": ("BOOLEAN", {"default": False}), "avoid_meta_descriptive_phrases": ("BOOLEAN", {"default": False}),
-                "character_name": ("STRING", {"default": "", "multiline": False, "placeholder": "e.g., 'Skywalker'"}),
-            }
+            "required": inputs
         }
 
     CATEGORY = "JoyCaption"
@@ -506,49 +498,16 @@ class JoyCaptionExtraOptions:
     RETURN_NAMES = ("extra_options",)
     FUNCTION = "generate_options"
 
-    def generate_options(self, refer_character_name, exclude_people_info, include_lighting, include_camera_angle,
-                         include_watermark_info, include_JPEG_artifacts, include_exif, exclude_sexual,
-                         exclude_image_resolution, include_aesthetic_quality, include_composition_style,
-                         exclude_text, specify_depth_field, specify_lighting_sources,
-                         do_not_use_ambiguous_language, include_nsfw_rating, only_describe_most_important_elements,
-                         do_not_include_artist_name_or_title, identify_image_orientation, use_vulgar_slang_and_profanity,
-                         do_not_use_polite_euphemisms, include_character_age, include_camera_shot_type,
-                         exclude_mood_feeling, include_camera_vantage_height, mention_watermark_explicitly,
-                         avoid_meta_descriptive_phrases, character_name):
-
-        # Access the EXTRA_MAP dictionary directly from the loaded joycaption_config
-        options_config_map = joycaption_config["EXTRA_MAP"]
-
+    def generate_options(self, **kwargs):
         selected_options = []
-        
-        # For each boolean input, if True, append the corresponding string from options_config_map
-        if refer_character_name: selected_options.append(options_config_map["refer_character_name"])
-        if exclude_people_info: selected_options.append(options_config_map["exclude_people_info"])
-        if include_lighting: selected_options.append(options_config_map["include_lighting"])
-        if include_camera_angle: selected_options.append(options_config_map["include_camera_angle"])
-        if include_watermark_info: selected_options.append(options_config_map["include_watermark_info"])
-        if include_JPEG_artifacts: selected_options.append(options_config_map["include_JPEG_artifacts"])
-        if include_exif: selected_options.append(options_config_map["include_exif"]) # Corrected line
-        if exclude_sexual: selected_options.append(options_config_map["exclude_sexual"])
-        if exclude_image_resolution: selected_options.append(options_config_map["exclude_image_resolution"])
-        if include_aesthetic_quality: selected_options.append(options_config_map["include_aesthetic_quality"])
-        if include_composition_style: selected_options.append(options_config_map["include_composition_style"])
-        if exclude_text: selected_options.append(options_config_map["exclude_text"])
-        if specify_depth_field: selected_options.append(options_config_map["specify_depth_field"])
-        if specify_lighting_sources: selected_options.append(options_config_map["specify_lighting_sources"])
-        if do_not_use_ambiguous_language: selected_options.append(options_config_map["do_not_use_ambiguous_language"])
-        if include_nsfw_rating: selected_options.append(options_config_map["include_nsfw_rating"])
-        if only_describe_most_important_elements: selected_options.append(options_config_map["only_describe_most_important_elements"])
-        if do_not_include_artist_name_or_title: selected_options.append(options_config_map["do_not_include_artist_name_or_title"])
-        if identify_image_orientation: selected_options.append(options_config_map["identify_image_orientation"])
-        if use_vulgar_slang_and_profanity: selected_options.append(options_config_map["use_vulgar_slang_and_profanity"])
-        if do_not_use_polite_euphemisms: selected_options.append(options_config_map["do_not_use_polite_euphemisms"])
-        if include_character_age: selected_options.append(options_config_map["include_character_age"])
-        if include_camera_shot_type: selected_options.append(options_config_map["include_camera_shot_type"])
-        if exclude_mood_feeling: selected_options.append(options_config_map["exclude_mood_feeling"])
-        if include_camera_vantage_height: selected_options.append(options_config_map["include_camera_vantage_height"])
-        if mention_watermark_explicitly: selected_options.append(options_config_map["mention_watermark_explicitly"])
-        if avoid_meta_descriptive_phrases: selected_options.append(options_config_map["avoid_meta_descriptive_phrases"])
+        character_name = None
+
+        for key, value in kwargs.items():
+            if key == "character_name":
+                character_name = value
+            # For each boolean input, if True, append the corresponding string from OPTIONS_CONFIG_MAP
+            elif value and key in OPTIONS_CONFIG_MAP:
+                selected_options.append(OPTIONS_CONFIG_MAP[key])
 
         # The return format for ComfyUI: a tuple containing the output value(s).
         # Here, the single output "extra_options" is a tuple of (list_of_strings, character_name_string).
