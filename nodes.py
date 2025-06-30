@@ -32,10 +32,10 @@ joycaption_node_path = os.path.dirname(os.path.realpath(__file__))
 joycaption_config = read_joycaption_config(os.path.join(joycaption_node_path, "joycaption_config.json"))
 
 # Store the actual data structures from the config
-CAPTION_TYPE_CONFIG_MAP = joycaption_config["CAPTION_TYPE_MAP"] # This is a dictionary
-CAPTION_LENGTH_CHOICES_LIST = list(joycaption_config["CAPTION_LENGTH_CHOICES"]) # This is a list of strings
-MEMORY_EFFICIENT_CONFIGS_DICT = joycaption_config["MEMORY_EFFICIENT_CONFIGS"] # This is a dictionary
-OPTIONS_CONFIG_MAP = joycaption_config["EXTRA_MAP"] # This is a dictionary
+CAPTION_TYPE_CONFIG_MAP = joycaption_config["CAPTION_TYPE_MAP"] # dictionary
+CAPTION_LENGTH_CHOICES_LIST = list(joycaption_config["CAPTION_LENGTH_CHOICES"]) # list of strings
+MEMORY_EFFICIENT_CONFIGS_DICT = joycaption_config["MEMORY_EFFICIENT_CONFIGS"] # dictionary
+OPTIONS_CONFIG_MAP = joycaption_config["EXTRA_MAP"] # dictionary
 
 # Derive lists of keys/choices specifically for UI elements (dropdowns)
 CAPTION_TYPE_CHOICES_KEYS = list(CAPTION_TYPE_CONFIG_MAP.keys())
@@ -152,58 +152,54 @@ def build_prompt(caption_type: str, caption_length: str | int, extra_options: li
     # Check against the original selected template to see if a placeholder *should* have been replaced.
     if not name_input and "{NAME}" in final_prompt: # This is expected if name_input was empty
         pass
-    
+
     if chosen_template_idx == 2 and "{length}" in selected_prompt_template_str and "{length}" in final_prompt:
-        print(f"[wo_joycaption_comfyui] (GGUF) Warning: Prompt template for '{caption_type}' might have unformatted '{{length}}'.")
-    
+        print(f"[wo_joycaption_comfyui] Warning: Prompt template for '{caption_type}' might have unformatted '{{length}}'.")
+
     if chosen_template_idx == 1 and "{word_count}" in selected_prompt_template_str and "{word_count}" in final_prompt:
-        print(f"[wo_joycaption_comfyui] (GGUF) Warning: Prompt template for '{caption_type}' might have unformatted '{{word_count}}'.")
+        print(f"[wo_joycaption_comfyui] Warning: Prompt template for '{caption_type}' might have unformatted '{{word_count}}'.")
 
     return final_prompt.strip()
 
 class JoyCaptionPredictor:
     def __init__(self, checkpoint_path: str, memory_mode: str, precision, device=None):
         if device is not None:
-            self.device = torch.device(device) # Store as instance attribute
+            self.device = torch.device(device)
         else:
-            self.device = mm.get_torch_device() # Store as instance attribute
+            self.device = mm.get_torch_device()
         
-        self.offload_device = mm.unet_offload_device() # Store as instance attribute
-        self.dtype = {"bf16": torch.bfloat16, "fp16": torch.float16, "fp32": torch.float32}[precision] # Store as instance attribute
+        self.offload_device = mm.unet_offload_device()
+        self.dtype = {"bf16": torch.bfloat16, "fp16": torch.float16, "fp32": torch.float32}[precision]
         
         self.processor = AutoProcessor.from_pretrained(str(checkpoint_path))
 
         if memory_mode == "Default":
             self.model = LlavaForConditionalGeneration.from_pretrained(
                 str(checkpoint_path),
-                torch_dtype=self.dtype, # Use self.dtype
-            )#.to(self.device) # Moving to device can be done here or explicitly in generate
+                torch_dtype=self.dtype,
+            )
         else:
             from transformers import BitsAndBytesConfig
             qnt_config = BitsAndBytesConfig(
                 **MEMORY_EFFICIENT_CONFIGS_DICT[memory_mode],
-                llm_int8_skip_modules=["vision_tower", "multi_modal_projector"], # Ensure this key is correct for your config
+                # Ensure this key is correct for your config
+                llm_int8_skip_modules=["vision_tower", "multi_modal_projector"],
             )
             self.model = LlavaForConditionalGeneration.from_pretrained(
                 str(checkpoint_path),
                 quantization_config=qnt_config
-            )#.to(self.device) # Moving to device can be done here or explicitly in generate
-            # output_dir = os.path.join(checkpoint_path, "pre-quantized")
-            # self.model.save_pretrained(output_dir, safe_serialization=True)
-            # self.processor.save_pretrained(output_dir)
-        # Consider moving the model to self.device here if it should always reside on it
-        # self.model.to(self.device)
+            )
     
     def generate(self, image: Image.Image, system: str, prompt: str, max_new_tokens: int, temperature: float,
                  top_p: float, top_k: int, seed: int=None, keep_model_loaded: bool=False) -> str:
         # Move model to the target device for generation
-        self.model.to(self.device) # Use self.device
+        self.model.to(self.device)
 
         seed_generator = None # Initialize seed_generator
         if seed:
             # Check if CUDA is available and if the target device is a CUDA device
-            if torch.cuda.is_available() and "cuda" in str(self.device): # Use self.device
-                seed_generator = torch.Generator(device=self.device) # Use self.device
+            if torch.cuda.is_available() and "cuda" in str(self.device):
+                seed_generator = torch.Generator(device=self.device)
                 seed_generator.manual_seed(seed)
             else:
                 # Fallback to CPU for seeding if CUDA not available or device is CPU
@@ -226,10 +222,10 @@ class JoyCaptionPredictor:
         assert isinstance(convo_string, str)
 
         # Process the inputs
-        inputs = self.processor(text=[convo_string], images=[image], return_tensors="pt").to(self.model.device) # Use self.model.device
+        inputs = self.processor(text=[convo_string], images=[image], return_tensors="pt").to(self.model.device)
         
         # Ensure pixel_values are on the correct device and dtype
-        inputs['pixel_values'] = inputs['pixel_values'].to(device=self.model.device, dtype=self.dtype) # Use self.dtype and self.model.device
+        inputs['pixel_values'] = inputs['pixel_values'].to(device=self.model.device, dtype=self.dtype)
 
         # Prepare generation arguments
         generation_kwargs = {
@@ -255,7 +251,7 @@ class JoyCaptionPredictor:
         caption = self.processor.tokenizer.decode(generate_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)
 
         if not keep_model_loaded:
-            self.model.to(self.offload_device) # Use self.offload_device
+            self.model.to(self.offload_device)
             mm.soft_empty_cache()
 
         return caption.strip()
@@ -264,6 +260,7 @@ class JoyCaptionPredictor:
 model_directory = os.path.join(folder_paths.models_dir, "LLavacheckpoints")
 os.makedirs(model_directory, exist_ok=True)
 
+# https://github.com/kijai/ComfyUI-Florence2/blob/de485b65b3e1b9b887ab494afa236dff4bef9a7e/nodes.py#L36
 def create_path_dict(paths: list[str], predicate: Callable[[Path], bool] = lambda _: True) -> dict[str, str]:
     """
     Creates a flat dictionary of the contents of all given paths: ``{name: absolute_path}``.
@@ -279,9 +276,7 @@ def create_path_dict(paths: list[str], predicate: Callable[[Path], bool] = lambd
 
             Default: Include everything
     """
-
     flattened_paths = [item for path in paths if Path(path).exists() for item in Path(path).iterdir() if predicate(item)]
-
     return {item.name: str(item.absolute()) for item in flattened_paths}
 
 def get_device_list():
@@ -305,16 +300,17 @@ class JoyCaptionDownloadAndLoad:
         
     @classmethod
     def INPUT_TYPES(s):
-        # memory_modes = list(joycaption_config["MEMORY_EFFICIENT_CONFIGS"].keys())
-        # models = list(joycaption_config["MODELS"])
-        current_devices = get_device_list() # Define devices here
+        models = list(joycaption_config["MODELS"])
+        current_devices = get_device_list()
         return {
             "required": {
-                "model": (list(joycaption_config["MODELS"]), # Assuming MODELS in JSON is a list
-                          {"default": 'fancyfeast/llama-joycaption-beta-one-hf-llava'}),
-                "memory_mode": (MEMORY_EFFICIENT_MODES_KEYS, {}), # Corrected
-                "precision_default": ([ 'fp16','bf16','fp32'], {"default": 'fp16'}),
-                "device": (current_devices, {"default": current_devices[1] if len(current_devices) > 1 else current_devices[0]}), # Fixed NameError
+                "model": (models, {"default": models[0]}),
+                "memory_mode": (MEMORY_EFFICIENT_MODES_KEYS, {}),
+                "precision_default": (['fp16','bf16','fp32'], {"default": 'fp16'}),
+                "device": (
+                    current_devices,
+                    {"default": current_devices[1] if len(current_devices) > 1 else current_devices[0]}
+                ),
             },
         }
 
@@ -342,7 +338,6 @@ class JoyCaptionDownloadAndLoad:
 class JoyCaptionLoader:
     @classmethod
     def INPUT_TYPES(s):
-        # memory_modes = list(joycaption_config["MEMORY_EFFICIENT_CONFIGS"].keys())
         all_llm_paths = folder_paths.get_folder_paths("LLavacheckpoints")
         s.model_paths = create_path_dict(all_llm_paths, lambda x: x.is_dir())
         devices = get_device_list()
@@ -351,7 +346,7 @@ class JoyCaptionLoader:
             "required": {
                 "model": ([*s.model_paths],
                           {"tooltip": "models are expected to be in Comfyui/models/LLavacheckpoints folder"}),
-                "memory_mode": (MEMORY_EFFICIENT_MODES_KEYS, {}), # Corrected
+                "memory_mode": (MEMORY_EFFICIENT_MODES_KEYS, {}),
                 "precision_default": ([ 'fp16','bf16','fp32'], {"default": 'fp16'}),
                 "device": (devices, {"default": devices[1] if len(devices) > 1 else devices[0]}),
             },
@@ -373,18 +368,11 @@ class JoyCaptionLoader:
 class JoyCaption:
     @classmethod
     def INPUT_TYPES(cls):
-        # caption_lengths = list(joycaption_config["CAPTION_LENGTH_CHOICES"]) # Old
-        # caption_types = list(joycaption_config["CAPTION_TYPE_MAP"].keys())   # Old
         req = {
             "joycaption_model": ("JOYCAPTIONMODEL",),
             "image": ("IMAGE",),
-            "caption_type": (CAPTION_TYPE_CHOICES_KEYS, {}), # Corrected
-            "caption_length": (CAPTION_LENGTH_CHOICES_LIST, {"default": "long"}), # Corrected
-            # "extra_option1": (list(EXTRA_OPTIONS),),
-            # "extra_option2": (list(EXTRA_OPTIONS),),
-            # "extra_option3": (list(EXTRA_OPTIONS),),
-            # "extra_option4": (list(EXTRA_OPTIONS),),
-            # "extra_option5": (list(EXTRA_OPTIONS),),
+            "caption_type": (CAPTION_TYPE_CHOICES_KEYS, {}),
+            "caption_length": (CAPTION_LENGTH_CHOICES_LIST, {"default": "long"}),
             # generation params
             "max_new_tokens":       ("INT",     {"default": 512, "min": 1, "max": 2048}),
             "temperature":          ("FLOAT",   {"default": 0.6, "min": 0.0, "max": 2.0, "step": 0.05}),
@@ -482,7 +470,6 @@ class JoyCaptionCustom:
 class JoyCaptionExtraOptions:
     @classmethod
     def INPUT_TYPES(cls):
-        # ... (INPUT_TYPES definition remains the same)
         inputs = {key: ("BOOLEAN", {"default": False, "tooltip": value}) for key, value in OPTIONS_CONFIG_MAP.items()}
         inputs["character_name"] = ("STRING", {"default": "", "multiline": False, "placeholder": "e.g., 'Skywalker'"})
         return {
@@ -510,9 +497,7 @@ class JoyCaptionExtraOptions:
         return ((selected_options, character_name or ""),)
 
 
-
-
-
+# Optional GGUF support
 try:
     from llama_cpp import Llama
     from llama_cpp.llama_chat_format import Llava15ChatHandler
