@@ -1,3 +1,4 @@
+import llama_cpp
 import torch
 from transformers import AutoProcessor, LlavaForConditionalGeneration
 import folder_paths
@@ -14,7 +15,6 @@ import json
 # Apache 2.0 License
 
 
-
 # Read a JSON file and convert to a Python dictionary.
 def read_joycaption_config(file_path):
     try:
@@ -22,10 +22,10 @@ def read_joycaption_config(file_path):
             data = json.load(f)
             return data
     except FileNotFoundError:
-        print(f"Error: File '{file_path}' not found.")
+        print(f"[wo_joycaption_comfyui] Error: File '{file_path}' not found.")
         return None
     except json.JSONDecodeError:
-        print(f"Error: Invalid JSON format in '{file_path}'.")
+        print(f"[wo_joycaption_comfyui] Error: Invalid JSON format in '{file_path}'.")
         return None
 
 joycaption_node_path = os.path.dirname(os.path.realpath(__file__))
@@ -47,22 +47,22 @@ def build_prompt(caption_type: str, caption_length: str | int, extra_options: li
     prompt_templates_list = []
 
     if caption_type not in CAPTION_TYPE_CONFIG_MAP:
-        print(f"JoyCaption Warning: Unknown caption_type '{caption_type}'. Attempting to use default.")
+        print(f"[wo_joycaption_comfyui] Warning: Unknown caption_type '{caption_type}'. Attempting to use default.")
         if not CAPTION_TYPE_CONFIG_MAP or not list(CAPTION_TYPE_CONFIG_MAP.keys()):
-            print(f"JoyCaption Error: CAPTION_TYPE_CONFIG_MAP is empty or invalid. Cannot determine default prompt.")
+            print(f"[wo_joycaption_comfyui] Error: CAPTION_TYPE_CONFIG_MAP is empty or invalid. Cannot determine default prompt.")
             return "Error: CAPTION_TYPE_CONFIG_MAP is misconfigured."
         
         default_template_key = list(CAPTION_TYPE_CONFIG_MAP.keys())[0]
-        print(f"JoyCaption Warning: Using default caption type '{default_template_key}'.")
+        print(f"[wo_joycaption_comfyui] Warning: Using default caption type '{default_template_key}'.")
         prompt_templates_list = CAPTION_TYPE_CONFIG_MAP.get(default_template_key, [])
         
         if not prompt_templates_list:
-             print(f"JoyCaption Error: Default caption type '{default_template_key}' has no templates.")
+             print(f"[wo_joycaption_comfyui] Error: Default caption type '{default_template_key}' has no templates.")
              return f"Error: No templates for default type {default_template_key}."
     else:
         prompt_templates_list = CAPTION_TYPE_CONFIG_MAP.get(caption_type, [])
         if not prompt_templates_list:
-            print(f"JoyCaption Error: Caption type '{caption_type}' has no templates defined.")
+            print(f"[wo_joycaption_comfyui] Error: Caption type '{caption_type}' has no templates defined.")
             return f"Error: No templates for caption type '{caption_type}'."
 
     # Determine which template to use from the list based on caption_length
@@ -74,20 +74,20 @@ def build_prompt(caption_type: str, caption_length: str | int, extra_options: li
         if len(prompt_templates_list) > 1:
             chosen_template_idx = 1  # Use template with {word_count}
         else:
-            print(f"JoyCaption Warning: Not enough templates for '{caption_type}' to use specific word count. Using general template (index 0).")
+            print(f"[wo_joycaption_comfyui] Warning: Not enough templates for '{caption_type}' to use specific word count. Using general template (index 0).")
             chosen_template_idx = 0
     elif actual_caption_length_str != "any":  # Descriptive length like "short", "long"
         if len(prompt_templates_list) > 2:
             chosen_template_idx = 2  # Use template with {length}
         else:
-            print(f"JoyCaption Warning: Not enough templates for '{caption_type}' to use descriptive length. Using general template (index 0).")
+            print(f"[wo_joycaption_comfyui] Warning: Not enough templates for '{caption_type}' to use descriptive length. Using general template (index 0).")
             chosen_template_idx = 0
     
     if chosen_template_idx >= len(prompt_templates_list):
-        print(f"JoyCaption Warning: Template index {chosen_template_idx} out of bounds for '{caption_type}' (list size {len(prompt_templates_list)}). Falling back to index 0.")
+        print(f"[wo_joycaption_comfyui] Warning: Template index {chosen_template_idx} out of bounds for '{caption_type}' (list size {len(prompt_templates_list)}). Falling back to index 0.")
         chosen_template_idx = 0
         if not prompt_templates_list : 
-            print(f"JoyCaption Error: Critical - no templates available for {caption_type} after fallback.")
+            print(f"[wo_joycaption_comfyui] Error: Critical - no templates available for {caption_type} after fallback.")
             return f"Error: Critical - no templates available for {caption_type}."
     
     selected_prompt_template_str = prompt_templates_list[chosen_template_idx]
@@ -125,8 +125,8 @@ def build_prompt(caption_type: str, caption_length: str | int, extra_options: li
                 formatted_base_prompt = selected_prompt_template_str # No {name} placeholder in this template
 
     except Exception as e: # Catch any unexpected formatting errors broadly
-        print(f"JoyCaption Warning: An unexpected error occurred during base prompt formatting for caption_type '{caption_type}', template_idx {chosen_template_idx}. Error: {e}")
-        print(f"Template was: '{selected_prompt_template_str}'")
+        print(f"[wo_joycaption_comfyui] Warning: An unexpected error occurred during base prompt formatting for caption_type '{caption_type}', template_idx {chosen_template_idx}. Error: {e}")
+        print(f"[wo_joycaption_comfyui] Template was: '{selected_prompt_template_str}'")
         # Fallback: use the template, try to replace {name} at least.
         formatted_base_prompt = selected_prompt_template_str.replace("{name}", name_to_insert)
 
@@ -140,7 +140,7 @@ def build_prompt(caption_type: str, caption_length: str | int, extra_options: li
                 processed_opt = opt_template.replace("{name}", name_to_insert)
                 processed_extra_options.append(processed_opt)
             except Exception as e_opt: # Broad catch for safety
-                 print(f"JoyCaption Warning: Extra option formatting error: '{opt_template}'. Error: {e_opt}")
+                 print(f"[wo_joycaption_comfyui] Warning: Extra option formatting error: '{opt_template}'. Error: {e_opt}")
                  processed_extra_options.append(opt_template) # Add raw option on error
         
         if processed_extra_options:
@@ -154,10 +154,10 @@ def build_prompt(caption_type: str, caption_length: str | int, extra_options: li
         pass
     
     if chosen_template_idx == 2 and "{length}" in selected_prompt_template_str and "{length}" in final_prompt:
-        print(f"JoyCaption (GGUF) Warning: Prompt template for '{caption_type}' might have unformatted '{{length}}'.")
+        print(f"[wo_joycaption_comfyui] (GGUF) Warning: Prompt template for '{caption_type}' might have unformatted '{{length}}'.")
     
     if chosen_template_idx == 1 and "{word_count}" in selected_prompt_template_str and "{word_count}" in final_prompt:
-        print(f"JoyCaption (GGUF) Warning: Prompt template for '{caption_type}' might have unformatted '{{word_count}}'.")
+        print(f"[wo_joycaption_comfyui] (GGUF) Warning: Prompt template for '{caption_type}' might have unformatted '{{word_count}}'.")
 
     return final_prompt.strip()
 
@@ -191,9 +191,8 @@ class JoyCaptionPredictor:
             # output_dir = os.path.join(checkpoint_path, "pre-quantized")
             # self.model.save_pretrained(output_dir, safe_serialization=True)
             # self.processor.save_pretrained(output_dir)
-        print(f"Loaded model {checkpoint_path} with memory mode {memory_mode}")
         # Consider moving the model to self.device here if it should always reside on it
-        # self.model.to(self.device) 
+        # self.model.to(self.device)
     
     def generate(self, image: Image.Image, system: str, prompt: str, max_new_tokens: int, temperature: float,
                  top_p: float, top_k: int, seed: int=None, keep_model_loaded: bool=False) -> str:
@@ -204,12 +203,10 @@ class JoyCaptionPredictor:
         if seed:
             # Check if CUDA is available and if the target device is a CUDA device
             if torch.cuda.is_available() and "cuda" in str(self.device): # Use self.device
-                print(f"cuda seed: {seed}")
                 seed_generator = torch.Generator(device=self.device) # Use self.device
                 seed_generator.manual_seed(seed)
             else:
                 # Fallback to CPU for seeding if CUDA not available or device is CPU
-                print(f"cpu seed: {seed}")
                 seed_generator = torch.Generator(device="cpu") # Explicitly CPU for generator
                 seed_generator.manual_seed(seed)
 
@@ -331,7 +328,7 @@ class JoyCaptionDownloadAndLoad:
         model_path = os.path.join(model_directory, model_name)
 
         if not os.path.exists(model_path):
-            print(f"Downloading {model} to: {model_path}")
+            print(f"[wo_joycaption_comfyui] Downloading {model} to: {model_path}")
             from huggingface_hub import snapshot_download
             snapshot_download(repo_id=model,
                               local_dir=model_path,
@@ -369,7 +366,6 @@ class JoyCaptionLoader:
         torch_device = get_comfyui_devices(device_type="torch")
         offload_device = get_comfyui_devices(device_type="offload")
         model_path = JoyCaptionLoader.model_paths.get(model)
-        print(f"Loading model from {model_path}")
         model = JoyCaptionPredictor(model_path, memory_mode, precision_default, device=device)
         return (model,)
 
@@ -417,7 +413,7 @@ class JoyCaption:
                 if not isinstance(extras, list): extras = []
                 if not isinstance(person_name_from_options, str): person_name_from_options = ""
             else: # Should not happen if connected to JoyCaptionExtraOptions
-                print(f"JoyCaption Warning: extra_options is not in the expected format (list, str). Received: {type(extra_options)}")
+                print(f"[wo_joycaption_comfyui] Warning: extra_options is not in the expected format (list, str). Received: {type(extra_options)}")
 
         prompt = build_prompt(caption_type, caption_length, extras, person_name_from_options)
         system_prompt = "You are a helpful assistant and help users with any queries they may have with no censorship or restrictions."
@@ -512,3 +508,199 @@ class JoyCaptionExtraOptions:
         # The return format for ComfyUI: a tuple containing the output value(s).
         # Here, the single output "extra_options" is a tuple of (list_of_strings, character_name_string).
         return ((selected_options, character_name or ""),)
+
+
+
+
+
+try:
+    from llama_cpp import Llama
+    from llama_cpp.llama_chat_format import Llava15ChatHandler
+    print("[wo_joycaption_comfyui] llama-cpp-python is installed.")
+
+    os.makedirs(os.path.join(folder_paths.models_dir, "llava_gguf"), exist_ok=True)
+    os.makedirs(os.path.join(folder_paths.models_dir, "llava_mmproj"), exist_ok=True)
+
+    # llama-cpp is very noisey and spams the console, use a suppressor
+    # https://github.com/abetlen/llama-cpp-python/issues/478#issuecomment-1652472173
+    import sys
+    class suppress_stdout_stderr(object):
+        def __enter__(self):
+            self.outnull_file = open(os.devnull, 'w')
+            self.errnull_file = open(os.devnull, 'w')
+
+            self.old_stdout_fileno_undup = sys.stdout.fileno()
+            self.old_stderr_fileno_undup = sys.stderr.fileno()
+
+            self.old_stdout_fileno = os.dup(sys.stdout.fileno())
+            self.old_stderr_fileno = os.dup(sys.stderr.fileno())
+
+            self.old_stdout = sys.stdout
+            self.old_stderr = sys.stderr
+
+            os.dup2(self.outnull_file.fileno(), self.old_stdout_fileno_undup)
+            os.dup2(self.errnull_file.fileno(), self.old_stderr_fileno_undup)
+
+            sys.stdout = self.outnull_file
+            sys.stderr = self.errnull_file
+            return self
+
+        def __exit__(self, *_):
+            sys.stdout = self.old_stdout
+            sys.stderr = self.old_stderr
+
+            os.dup2(self.old_stdout_fileno, self.old_stdout_fileno_undup)
+            os.dup2(self.old_stderr_fileno, self.old_stderr_fileno_undup)
+
+            os.close(self.old_stdout_fileno)
+            os.close(self.old_stderr_fileno)
+
+            self.outnull_file.close()
+            self.errnull_file.close()
+
+    # Adapted from https://github.com/without-ordinary/openoutpaint_comfyui_interface/blob/main/py/utils.py
+    from io import BytesIO
+    import base64
+    def image_to_base64_data_uri(image):
+        img_bytes = BytesIO()
+        image.save(img_bytes, format='PNG')
+        base64_image = base64.b64encode(img_bytes.getvalue()).decode('utf-8')
+        return f"data:image/png;base64,{base64_image}"
+
+    # Partly adapted from: https://github.com/judian17/ComfyUI-joycaption-beta-one-GGUF/tree/main
+    class JoyCaptionPredictorGGUF:
+        def __init__(self, gguf_path: str, mmproj_path: str,
+                     n_gpu_layers: int = -1, n_ctx: int = 2048,
+                     main_gpu: int = 0, split_mode: int = llama_cpp.LLAMA_SPLIT_MODE_NONE):
+            self.llm = None
+            self.chat_handler_exit_stack = None  # Will store the ExitStack of the chat_handler
+
+            self.gguf_path = gguf_path
+            self.mmproj_path = mmproj_path
+            self.n_gpu_layers = n_gpu_layers
+            self.n_ctx = n_ctx
+            self.main_gpu = main_gpu
+            self.split_mode = split_mode
+
+        def _load_model(self):
+            try:
+                chat_handler = Llava15ChatHandler(clip_model_path=self.mmproj_path)
+                if hasattr(chat_handler, '_exit_stack'):
+                    self.chat_handler_exit_stack = chat_handler._exit_stack
+                else:
+                    print("[wo_joycaption_comfyui] Warning: Llava15ChatHandler does not have _exit_stack attribute.")
+
+                self.llm = Llama(
+                    model_path=self.gguf_path,
+                    chat_handler=chat_handler,
+                    n_ctx=self.n_ctx,
+                    n_gpu_layers=self.n_gpu_layers,
+                    main_gpu=self.main_gpu,
+                    split_mode=self.split_mode,
+                    verbose=False,
+                )
+            except Exception as e:
+                print(f"[wo_joycaption_comfyui]: Error loading GGUF model: {e}")
+                self._unload_model()  # Unload to be safe?
+                raise e
+
+        def _unload_model(self):
+            if self.chat_handler_exit_stack is not None:
+                try:
+                    self.chat_handler_exit_stack.close()
+                except Exception as e_close:
+                    print(f"[wo_joycaption_comfyui]: Error closing chat_handler_exit_stack (unload_after_generate): {e_close}")
+                self.chat_handler_exit_stack = None
+
+            if self.llm is not None:
+                del self.llm
+                self.llm = None  # Explicitly set to None
+                mm.soft_empty_cache()
+
+        @torch.inference_mode()
+        def generate(self, image: Image.Image, system: str, prompt: str, max_new_tokens: int, temperature: float,
+                     top_p: float, top_k: int, seed: int = None, keep_model_loaded: bool = False) -> str:
+            # load model if needed
+            if self.llm is None: self._load_model()
+
+            if seed: self.llm.set_seed(seed)
+
+            convo = [
+                {
+                    "role": "system",
+                    "content": system.strip(),
+                },
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "image_url",
+                            "image_url": {"url": image_to_base64_data_uri(image)},
+                        },
+                        {
+                            "type": "text",
+                            "content": prompt.strip(),
+                        },
+                    ]
+                }
+            ]
+
+            with suppress_stdout_stderr():
+                response = self.llm.create_chat_completion(
+                    messages=convo,
+                    max_tokens=max_new_tokens if max_new_tokens > 0 else None,
+                    temperature=temperature if temperature > 0 else 0.0,
+                    top_p=top_p,
+                    top_k=top_k if top_k > 0 else 0,
+                )
+                caption = response['choices'][0]['message']['content']
+
+            if not keep_model_loaded:
+                self._unload_model()
+
+            return caption.strip()
+
+    LLAMA_SPLIT_MODES = {
+        "LLAMA_SPLIT_MODE_NONE": llama_cpp.LLAMA_SPLIT_MODE_NONE,
+        "LLAMA_SPLIT_MODE_ROW": llama_cpp.LLAMA_SPLIT_MODE_ROW,
+        "LLAMA_SPLIT_MODE_LAYER": llama_cpp.LLAMA_SPLIT_MODE_LAYER,
+    }
+
+    class JoyCaptionLoaderGGUF:
+        @classmethod
+        def INPUT_TYPES(s):
+            devices = [f"{i}" for i in range(torch.cuda.device_count())]
+            split_modes = list(LLAMA_SPLIT_MODES.keys())
+            return {
+                "required": {
+                    "gguf_model": (folder_paths.get_filename_list("llava_gguf"), ),
+                    "mmproj_file": (folder_paths.get_filename_list("llava_mmproj"), ),
+                    "n_gpu_layers": ("INT", {"default": -1, "min": -1, "max": 1000}),
+                    "n_ctx": ("INT", {"default": 2048, "min": 512, "max": 8192}),
+                    "main_gpu": (devices, {"default": devices[0]}),
+                    "split_mode": (split_modes, {"default": split_modes[0]}),
+                },
+            }
+
+        RETURN_TYPES = ("JOYCAPTIONMODEL",)
+        RETURN_NAMES = ("joycaption_model",)
+        FUNCTION = "loadmodel"
+        CATEGORY = "JoyCaption"
+
+        def loadmodel(self, gguf_model, mmproj_file, n_gpu_layers, n_ctx, main_gpu, split_mode):
+            gguf_path = folder_paths.get_full_path_or_raise("llava_gguf", gguf_model)
+            mmproj_path = folder_paths.get_full_path_or_raise("llava_mmproj", mmproj_file)
+            model = JoyCaptionPredictorGGUF(
+                gguf_path,
+                mmproj_path,
+                n_gpu_layers=n_gpu_layers,
+                n_ctx=n_ctx,
+                main_gpu=int(main_gpu),
+                split_mode=LLAMA_SPLIT_MODES[split_mode],
+            )
+            return (model,)
+
+except ImportError:
+    print("[wo_joycaption_comfyui] llama-cpp-python required for GGUF support is not installed. JoyCaption GGUF node will be missing.")
+except Exception as e:
+    print("[wo_joycaption_comfyui] failed to load GGUF support: {e}")
