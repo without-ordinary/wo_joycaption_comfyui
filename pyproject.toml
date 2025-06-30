@@ -1,7 +1,7 @@
 [project]
 name = "wo_joycaption_comfyui"
 description = "Nodes for running the JoyCaption image captioner VLM."
-version = "1.0.0"
+version = "1.0.1"
 license = {file = "LICENSE"}
 dependencies = ["transformers>=4.51.0", "torchvision", "torch>=2.6.0", "huggingface-hub>=0.30.1", "accelerate", "bitsandbytes"]
 
