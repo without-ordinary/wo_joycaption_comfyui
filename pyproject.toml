@@ -1,7 +1,7 @@
 [project]
 name = "wo_joycaption_comfyui"
-description = "Nodes for running the JoyCaption image captioner VLM."
-version = "1.0.3"
+description = "A fork of fpgaminer's JoyCatpion nodes for running the JoyCaption image captioner VLM."
+version = "1.0.4"
 license = {file = "LICENSE"}
 dependencies = ["transformers>=4.51.0", "torchvision", "torch>=2.6.0", "huggingface-hub>=0.30.1", "accelerate", "bitsandbytes"]
 
@@ -10,6 +10,6 @@ Repository = "https://github.com/without-ordinary/wo_joycaption_comfyui"
 
 [tool.comfy]
 PublisherId = "without-ordinary"
-DisplayName = "Without's JoyCaption ComfyUI"
+DisplayName = "Without's JoyCaption ComfyUI Nodes"
 Icon = ""
 

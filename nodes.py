@@ -552,7 +552,7 @@ try:
         base64_image = base64.b64encode(img_bytes.getvalue()).decode('utf-8')
         return f"data:image/png;base64,{base64_image}"
 
-    # Partly adapted from: https://github.com/judian17/ComfyUI-joycaption-beta-one-GGUF/tree/main
+    # Partly adapted from: https://github.com/judian17/ComfyUI-joycaption-beta-one-GGUF
     class JoyCaptionPredictorGGUF:
         def __init__(self, gguf_path: str, mmproj_path: str,
                      n_gpu_layers: int = -1, n_ctx: int = 2048,
